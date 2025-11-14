@@ -47,6 +47,9 @@ window.switchTab = function(tabName) {
   } else if (tabName === 'revisions') {
     populateClientSelect('revision-client');
     loadRevisions();
+  } else if (tabName === 'videos') {
+    populateClientSelect('video-client');
+    populateClientSelect('youtube-client');
   }
 }
 
@@ -680,4 +683,312 @@ window.viewClientDetail = function(id) {
 window.editClient = function(id) {
   // クライアント編集（必要に応じて実装）
   showClientModal(id);
+}
+
+// ========================================
+// 動画学習システム
+// ========================================
+
+let currentVideoClient = null;
+
+// 動画アップロードモード切り替え
+window.switchVideoUploadMode = function(mode) {
+  const fileForm = document.getElementById('video-upload-form');
+  const youtubeForm = document.getElementById('youtube-add-form');
+  const fileBtn = document.getElementById('upload-mode-file');
+  const youtubeBtn = document.getElementById('upload-mode-youtube');
+  
+  if (mode === 'file') {
+    fileForm.classList.remove('hidden');
+    youtubeForm.classList.add('hidden');
+    fileBtn.classList.add('text-blue-600', 'border-b-2', 'border-blue-600');
+    fileBtn.classList.remove('text-gray-500');
+    youtubeBtn.classList.remove('text-blue-600', 'border-b-2', 'border-blue-600');
+    youtubeBtn.classList.add('text-gray-500');
+  } else {
+    fileForm.classList.add('hidden');
+    youtubeForm.classList.remove('hidden');
+    youtubeBtn.classList.add('text-blue-600', 'border-b-2', 'border-blue-600');
+    youtubeBtn.classList.remove('text-gray-500');
+    fileBtn.classList.remove('text-blue-600', 'border-b-2', 'border-blue-600');
+    fileBtn.classList.add('text-gray-500');
+  }
+}
+
+// 動画アップロードフォーム送信
+document.getElementById('video-upload-form')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  
+  const clientId = document.getElementById('video-client').value;
+  const title = document.getElementById('video-title').value;
+  const fileInput = document.getElementById('video-file');
+  const file = fileInput.files[0];
+  
+  if (!file) {
+    alert('動画ファイルを選択してください');
+    return;
+  }
+  
+  // パフォーマンス指標
+  const views = document.getElementById('video-views').value || 0;
+  const likes = document.getElementById('video-likes').value || 0;
+  const saves = document.getElementById('video-saves').value || 0;
+  const performanceMetrics = JSON.stringify({ views: parseInt(views), likes: parseInt(likes), saves: parseInt(saves) });
+  
+  // FormDataを作成
+  const formData = new FormData();
+  formData.append('video', file);
+  formData.append('client_id', clientId);
+  formData.append('title', title);
+  formData.append('performance_metrics', performanceMetrics);
+  
+  try {
+    // ローディング表示
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>アップロード中...';
+    submitBtn.disabled = true;
+    
+    const response = await axios.post('/api/videos/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    
+    alert('動画のアップロードが完了しました！\n次にAI解析を実行してください。');
+    
+    // フォームリセット
+    e.target.reset();
+    
+    // 動画一覧を更新
+    loadVideosForClient(clientId);
+    
+    // 解析を自動実行
+    if (confirm('すぐにAI解析を実行しますか？（Gemini API使用）')) {
+      await analyzeVideo(response.data.video_id);
+    }
+    
+    submitBtn.innerHTML = originalText;
+    submitBtn.disabled = false;
+  } catch (error) {
+    console.error('Upload error:', error);
+    alert('アップロードエラー: ' + (error.response?.data?.error || error.message));
+    submitBtn.innerHTML = originalText;
+    submitBtn.disabled = false;
+  }
+});
+
+// YouTube動画追加フォーム送信
+document.getElementById('youtube-add-form')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  
+  const clientId = document.getElementById('youtube-client').value;
+  const youtubeUrl = document.getElementById('youtube-url').value;
+  const title = document.getElementById('youtube-title').value;
+  
+  // パフォーマンス指標
+  const views = document.getElementById('youtube-views').value || 0;
+  const likes = document.getElementById('youtube-likes').value || 0;
+  const saves = document.getElementById('youtube-saves').value || 0;
+  const performanceMetrics = { views: parseInt(views), likes: parseInt(likes), saves: parseInt(saves) };
+  
+  try {
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>追加中...';
+    submitBtn.disabled = true;
+    
+    const response = await axios.post('/api/videos/youtube', {
+      client_id: clientId,
+      youtube_url: youtubeUrl,
+      title: title || undefined,
+      performance_metrics: performanceMetrics
+    });
+    
+    alert('YouTube動画を追加しました！\n次にAI解析を実行してください。');
+    
+    e.target.reset();
+    loadVideosForClient(clientId);
+    
+    // 解析を自動実行
+    if (confirm('すぐにAI解析を実行しますか？（Gemini API使用）')) {
+      await analyzeVideo(response.data.video_id);
+    }
+    
+    submitBtn.innerHTML = originalText;
+    submitBtn.disabled = false;
+  } catch (error) {
+    console.error('YouTube add error:', error);
+    alert('追加エラー: ' + (error.response?.data?.error || error.message));
+    submitBtn.innerHTML = originalText;
+    submitBtn.disabled = false;
+  }
+});
+
+// クライアント選択時に動画一覧を読み込み
+document.getElementById('video-client')?.addEventListener('change', (e) => {
+  const clientId = e.target.value;
+  if (clientId) {
+    currentVideoClient = clientId;
+    loadVideosForClient(clientId);
+    loadLearningStats(clientId);
+  }
+});
+
+document.getElementById('youtube-client')?.addEventListener('change', (e) => {
+  const clientId = e.target.value;
+  if (clientId) {
+    currentVideoClient = clientId;
+    loadVideosForClient(clientId);
+    loadLearningStats(clientId);
+  }
+});
+
+// 動画一覧読み込み
+async function loadVideosForClient(clientId) {
+  try {
+    const response = await axios.get(`/api/videos/client/${clientId}`);
+    const videos = response.data.videos;
+    
+    const videosList = document.getElementById('videos-list');
+    
+    if (!videos || videos.length === 0) {
+      videosList.innerHTML = '<p class="text-gray-500 text-center py-8">まだ動画が追加されていません</p>';
+      return;
+    }
+    
+    videosList.innerHTML = videos.map(video => `
+      <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition">
+        <div class="flex items-start justify-between">
+          <div class="flex-1">
+            <div class="flex items-center space-x-2 mb-2">
+              <h4 class="font-bold text-gray-800">${video.title}</h4>
+              ${video.source_type === 'youtube' 
+                ? '<span class="text-xs bg-red-100 text-red-600 px-2 py-1 rounded"><i class="fab fa-youtube mr-1"></i>YouTube</span>'
+                : '<span class="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded"><i class="fas fa-cloud mr-1"></i>アップロード</span>'
+              }
+              ${video.has_analysis 
+                ? '<span class="text-xs bg-green-100 text-green-600 px-2 py-1 rounded"><i class="fas fa-check-circle mr-1"></i>解析済み</span>'
+                : '<span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded"><i class="fas fa-clock mr-1"></i>未解析</span>'
+              }
+            </div>
+            <div class="text-sm text-gray-600 space-y-1">
+              <p><i class="fas fa-clock mr-2"></i>尺: ${video.duration_seconds}秒</p>
+              <p><i class="fas fa-calendar mr-2"></i>追加日: ${new Date(video.upload_date).toLocaleDateString('ja-JP')}</p>
+              ${video.performance_metrics && video.performance_metrics !== '{}' ? `
+                <p><i class="fas fa-chart-line mr-2"></i>再生数: ${JSON.parse(video.performance_metrics).views?.toLocaleString() || 0}</p>
+              ` : ''}
+            </div>
+          </div>
+          <div class="flex flex-col space-y-2">
+            ${!video.has_analysis ? `
+              <button onclick="analyzeVideo(${video.id})" class="bg-pink-600 hover:bg-pink-700 text-white text-sm px-4 py-2 rounded-lg transition">
+                <i class="fas fa-brain mr-1"></i>AI解析
+              </button>
+            ` : `
+              <button onclick="viewVideoAnalysis(${video.id})" class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-lg transition">
+                <i class="fas fa-chart-bar mr-1"></i>解析結果
+              </button>
+            `}
+            <button onclick="deleteVideo(${video.id})" class="bg-red-600 hover:bg-red-700 text-white text-sm px-4 py-2 rounded-lg transition">
+              <i class="fas fa-trash mr-1"></i>削除
+            </button>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  } catch (error) {
+    console.error('Failed to load videos:', error);
+  }
+}
+
+// 学習統計読み込み
+async function loadLearningStats(clientId) {
+  try {
+    const response = await axios.get(`/api/videos/stats/${clientId}`);
+    const stats = response.data.stats;
+    
+    if (!stats) {
+      document.getElementById('learning-stats').classList.add('hidden');
+      return;
+    }
+    
+    document.getElementById('learning-stats').classList.remove('hidden');
+    document.getElementById('stats-total-videos').textContent = stats.total_videos_analyzed || 0;
+    document.getElementById('stats-cut-frequency').textContent = (stats.avg_cut_frequency || 0).toFixed(1) + '秒';
+    document.getElementById('stats-engagement').textContent = Math.round(stats.avg_engagement_score || 0) + '%';
+    document.getElementById('stats-total-views').textContent = (stats.total_views || 0).toLocaleString();
+  } catch (error) {
+    console.error('Failed to load learning stats:', error);
+  }
+}
+
+// AI解析実行
+window.analyzeVideo = async function(videoId) {
+  if (!confirm('AI解析を実行しますか？\nGemini API（有料）を使用します。')) {
+    return;
+  }
+  
+  try {
+    const response = await axios.post(`/api/videos/${videoId}/analyze`, { force: false });
+    
+    alert('AI解析が完了しました！\n\n解析結果:\n' + 
+          `エンゲージメントスコア: ${response.data.analysis.engagement_score}/100\n` +
+          `カット間隔: ${response.data.analysis.cut_frequency}秒\n` +
+          `トークン使用: ${response.data.analysis.tokens_used}\n` +
+          `コスト: $${response.data.analysis.cost_usd.toFixed(4)}`);
+    
+    // 動画一覧と統計を更新
+    loadVideosForClient(currentVideoClient);
+    loadLearningStats(currentVideoClient);
+  } catch (error) {
+    console.error('Analysis error:', error);
+    alert('解析エラー: ' + (error.response?.data?.error || error.message));
+  }
+}
+
+// 解析結果表示
+window.viewVideoAnalysis = async function(videoId) {
+  try {
+    const response = await axios.get(`/api/videos/${videoId}/analysis`);
+    const analysis = response.data.analysis;
+    
+    // 解析結果をモーダル表示（簡易版）
+    const colorScheme = JSON.parse(analysis.color_scheme);
+    const paceRhythm = JSON.parse(analysis.pace_rhythm);
+    const bgmStyle = JSON.parse(analysis.bgm_style);
+    
+    alert(`【AI解析結果】\n\n` +
+          `動画: ${analysis.video_title}\n` +
+          `エンゲージメントスコア: ${analysis.engagement_score}/100\n\n` +
+          `【編集スタイル】\n` +
+          `カット間隔: ${analysis.cut_frequency}秒\n` +
+          `ペース: ${paceRhythm.pace}\n` +
+          `色温度: ${colorScheme.temperature}\n` +
+          `明るさ: ${colorScheme.brightness}\n` +
+          `BGM: ${bgmStyle.has_bgm ? bgmStyle.genre : 'なし'}\n\n` +
+          `解析日: ${new Date(analysis.analysis_date).toLocaleDateString('ja-JP')}`);
+  } catch (error) {
+    console.error('Failed to view analysis:', error);
+    alert('解析結果の取得に失敗しました: ' + (error.response?.data?.error || error.message));
+  }
+}
+
+// 動画削除
+window.deleteVideo = async function(videoId) {
+  if (!confirm('この動画と解析データを削除しますか？\n学習統計も再計算されます。')) {
+    return;
+  }
+  
+  try {
+    await axios.delete(`/api/videos/${videoId}`);
+    alert('動画を削除しました');
+    
+    // 動画一覧と統計を更新
+    loadVideosForClient(currentVideoClient);
+    loadLearningStats(currentVideoClient);
+  } catch (error) {
+    console.error('Delete error:', error);
+    alert('削除エラー: ' + (error.response?.data?.error || error.message));
+  }
 }

@@ -14,5 +14,12 @@
       "database_name": "webapp-production",
       "database_id": "local-dev-database"  // Placeholder for local development, will be replaced with actual ID for production
     }
+  ],
+  // R2 Storage for video files
+  "r2_buckets": [
+    {
+      "binding": "R2",
+      "bucket_name": "webapp-videos"
+    }
   ]
 }

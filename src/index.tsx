@@ -5,10 +5,14 @@ import clients from './routes/clients';
 import campaigns from './routes/campaigns';
 import blueprints from './routes/blueprints';
 import revisions from './routes/revisions';
+import videos from './routes/videos';
 
 // Type definition for Cloudflare bindings
 type Bindings = {
   DB: D1Database;
+  R2: R2Bucket;
+  GEMINI_API_KEY: string;
+  YOUTUBE_API_KEY?: string;
 };
 
 const app = new Hono<{ Bindings: Bindings }>();
@@ -24,6 +28,7 @@ app.route('/api/clients', clients);
 app.route('/api/campaigns', campaigns);
 app.route('/api/blueprints', blueprints);
 app.route('/api/revisions', revisions);
+app.route('/api/videos', videos);
 
 // Health check endpoint
 app.get('/api/health', (c) => {
@@ -76,6 +81,9 @@ app.get('/', (c) => {
                     </button>
                     <button onclick="switchTab('revisions')" class="tab-btn px-6 py-4 font-semibold text-gray-700 hover:bg-blue-50 border-b-2 border-transparent hover:border-blue-500 transition" data-tab="revisions">
                         <i class="fas fa-sync-alt mr-2"></i>修正管理
+                    </button>
+                    <button onclick="switchTab('videos')" class="tab-btn px-6 py-4 font-semibold text-gray-700 hover:bg-blue-50 border-b-2 border-transparent hover:border-blue-500 transition" data-tab="videos">
+                        <i class="fas fa-brain mr-2"></i>動画学習
                     </button>
                 </div>
             </div>
@@ -210,6 +218,143 @@ app.get('/', (c) => {
                 </div>
                 <div id="revision-results" class="mt-8">
                     <!-- 修正依頼一覧がここに表示されます -->
+                </div>
+            </div>
+
+            <!-- 動画学習画面 -->
+            <div id="videos-tab" class="tab-content">
+                <div class="mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">
+                        <i class="fas fa-brain text-pink-600 mr-2"></i>動画学習システム
+                    </h2>
+                    <p class="text-gray-600 mb-6">
+                        実際に制作した動画をアップロードまたはYouTube URLから追加し、AIが編集スタイルを学習します。
+                        <br>学習データは企画生成・編集設計図に自動的に反映されます。
+                    </p>
+                    
+                    <!-- 動画アップロードフォーム -->
+                    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4">
+                            <i class="fas fa-upload mr-2"></i>動画を追加
+                        </h3>
+                        
+                        <!-- タブ切り替え -->
+                        <div class="flex space-x-2 mb-4 border-b">
+                            <button onclick="switchVideoUploadMode('file')" id="upload-mode-file" class="px-4 py-2 font-semibold text-blue-600 border-b-2 border-blue-600">
+                                <i class="fas fa-file-video mr-2"></i>ファイルアップロード
+                            </button>
+                            <button onclick="switchVideoUploadMode('youtube')" id="upload-mode-youtube" class="px-4 py-2 font-semibold text-gray-500 hover:text-blue-600">
+                                <i class="fab fa-youtube mr-2"></i>YouTube URL
+                            </button>
+                        </div>
+                        
+                        <!-- ファイルアップロードフォーム -->
+                        <form id="video-upload-form" class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">クライアント選択</label>
+                                <select id="video-client" class="w-full border border-gray-300 rounded-lg px-4 py-2" required>
+                                    <option value="">選択してください</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">動画タイトル</label>
+                                <input type="text" id="video-title" class="w-full border border-gray-300 rounded-lg px-4 py-2" placeholder="例: 新商品紹介動画" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">動画ファイル</label>
+                                <input type="file" id="video-file" accept="video/*" class="w-full border border-gray-300 rounded-lg px-4 py-2" required>
+                                <p class="text-xs text-gray-500 mt-1">対応形式: MP4, MOV, AVI, WebM</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">パフォーマンス指標（任意）</label>
+                                <div class="grid grid-cols-3 gap-4">
+                                    <div>
+                                        <input type="number" id="video-views" class="w-full border border-gray-300 rounded-lg px-4 py-2" placeholder="再生数">
+                                    </div>
+                                    <div>
+                                        <input type="number" id="video-likes" class="w-full border border-gray-300 rounded-lg px-4 py-2" placeholder="いいね数">
+                                    </div>
+                                    <div>
+                                        <input type="number" id="video-saves" class="w-full border border-gray-300 rounded-lg px-4 py-2" placeholder="保存数">
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="submit" class="bg-pink-600 hover:bg-pink-700 text-white px-8 py-3 rounded-lg font-bold shadow-md transition w-full">
+                                <i class="fas fa-cloud-upload-alt mr-2"></i>アップロード
+                            </button>
+                        </form>
+                        
+                        <!-- YouTube URLフォーム -->
+                        <form id="youtube-add-form" class="space-y-4 hidden">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">クライアント選択</label>
+                                <select id="youtube-client" class="w-full border border-gray-300 rounded-lg px-4 py-2" required>
+                                    <option value="">選択してください</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">YouTube URL</label>
+                                <input type="url" id="youtube-url" class="w-full border border-gray-300 rounded-lg px-4 py-2" placeholder="https://www.youtube.com/watch?v=..." required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">動画タイトル（任意）</label>
+                                <input type="text" id="youtube-title" class="w-full border border-gray-300 rounded-lg px-4 py-2" placeholder="自動取得されます">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">パフォーマンス指標（任意）</label>
+                                <div class="grid grid-cols-3 gap-4">
+                                    <div>
+                                        <input type="number" id="youtube-views" class="w-full border border-gray-300 rounded-lg px-4 py-2" placeholder="再生数">
+                                    </div>
+                                    <div>
+                                        <input type="number" id="youtube-likes" class="w-full border border-gray-300 rounded-lg px-4 py-2" placeholder="いいね数">
+                                    </div>
+                                    <div>
+                                        <input type="number" id="youtube-saves" class="w-full border border-gray-300 rounded-lg px-4 py-2" placeholder="保存数">
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="submit" class="bg-red-600 hover:bg-red-700 text-white px-8 py-3 rounded-lg font-bold shadow-md transition w-full">
+                                <i class="fab fa-youtube mr-2"></i>YouTube動画を追加
+                            </button>
+                        </form>
+                    </div>
+                    
+                    <!-- 学習統計 -->
+                    <div id="learning-stats" class="bg-gradient-to-r from-pink-50 to-purple-50 rounded-lg shadow-md p-6 mb-6 hidden">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4">
+                            <i class="fas fa-chart-bar mr-2"></i>学習統計
+                        </h3>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div class="bg-white rounded-lg p-4 shadow-sm">
+                                <p class="text-sm text-gray-600">分析済み動画数</p>
+                                <p class="text-2xl font-bold text-pink-600" id="stats-total-videos">0</p>
+                            </div>
+                            <div class="bg-white rounded-lg p-4 shadow-sm">
+                                <p class="text-sm text-gray-600">平均カット間隔</p>
+                                <p class="text-2xl font-bold text-pink-600" id="stats-cut-frequency">0秒</p>
+                            </div>
+                            <div class="bg-white rounded-lg p-4 shadow-sm">
+                                <p class="text-sm text-gray-600">平均エンゲージメント</p>
+                                <p class="text-2xl font-bold text-pink-600" id="stats-engagement">0%</p>
+                            </div>
+                            <div class="bg-white rounded-lg p-4 shadow-sm">
+                                <p class="text-sm text-gray-600">総再生数</p>
+                                <p class="text-2xl font-bold text-pink-600" id="stats-total-views">0</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 動画一覧 -->
+                    <div class="bg-white rounded-lg shadow-md p-6">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4">
+                            <i class="fas fa-video mr-2"></i>学習動画一覧
+                        </h3>
+                        <div id="videos-list" class="space-y-4">
+                            <!-- 動画カードがここに表示されます -->
+                            <p class="text-gray-500 text-center py-8">クライアントを選択して動画を追加してください</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </main>
