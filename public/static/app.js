@@ -958,16 +958,38 @@ window.viewVideoAnalysis = async function(videoId) {
     const paceRhythm = JSON.parse(analysis.pace_rhythm);
     const bgmStyle = JSON.parse(analysis.bgm_style);
     
-    alert(`【AI解析結果】\n\n` +
-          `動画: ${analysis.video_title}\n` +
-          `エンゲージメントスコア: ${analysis.engagement_score}/100\n\n` +
-          `【編集スタイル】\n` +
-          `カット間隔: ${analysis.cut_frequency}秒\n` +
-          `ペース: ${paceRhythm.pace}\n` +
-          `色温度: ${colorScheme.temperature}\n` +
-          `明るさ: ${colorScheme.brightness}\n` +
-          `BGM: ${bgmStyle.has_bgm ? bgmStyle.genre : 'なし'}\n\n` +
-          `解析日: ${new Date(analysis.analysis_date).toLocaleDateString('ja-JP')}`);
+    // 詳細な解析結果を表示（raw_analysisから取得）
+    const raw = analysis.raw_analysis || {};
+    
+    let resultText = `【AI解析結果】\n\n`;
+    resultText += `動画: ${analysis.video_title}\n`;
+    resultText += `カット間隔: ${analysis.cut_frequency}秒\n`;
+    resultText += `ペース: ${paceRhythm.pace}\n`;
+    resultText += `色温度: ${colorScheme.temperature}\n`;
+    resultText += `明るさ: ${colorScheme.brightness}\n`;
+    resultText += `BGM: ${bgmStyle.has_bgm ? bgmStyle.genre : 'なし'}\n\n`;
+    
+    if (raw.strengths && raw.strengths.length > 0) {
+      resultText += `【強み】\n`;
+      raw.strengths.forEach(s => resultText += `✓ ${s}\n`);
+      resultText += `\n`;
+    }
+    
+    if (raw.recommendations && raw.recommendations.length > 0) {
+      resultText += `【改善提案】\n`;
+      raw.recommendations.forEach(r => resultText += `→ ${r}\n`);
+      resultText += `\n`;
+    }
+    
+    if (raw.engagementMetrics) {
+      resultText += `【エンゲージメント予測】\n`;
+      resultText += `視聴維持率: ${raw.engagementMetrics.estimatedRetention}%\n`;
+      resultText += `バズ可能性: ${raw.engagementMetrics.viralPotential}/100\n\n`;
+    }
+    
+    resultText += `解析日: ${new Date(analysis.created_at).toLocaleDateString('ja-JP')}`;
+    
+    alert(resultText);
   } catch (error) {
     console.error('Failed to view analysis:', error);
     alert('解析結果の取得に失敗しました: ' + (error.response?.data?.error || error.message));
