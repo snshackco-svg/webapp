@@ -363,13 +363,13 @@ videos.post('/:videoId/analyze', async (c) => {
     // Import Gemini helper (dynamic import for proper bundling)
     const { analyzeVideoWithGemini } = await import('../gemini-helper')
     
-    // Perform analysis with Gemini 1.5 Flash (安定・高速・コスパ最強)
+    // Perform analysis with Gemini 2.0 Flash (高速・安定・最適なコスパ)
     const analysisResult = await analyzeVideoWithGemini(
       video,
       clientProfile,
       {
         apiKey: c.env.GEMINI_API_KEY,
-        model: 'gemini-1.5-flash', // Gemini 1.5 Flash - 安定・高速・v1beta対応
+        model: 'gemini-2.0-flash', // Gemini 2.0 Flash - 安定モデル
         temperature: 0.4, // 適度な創造性と一貫性のバランス
         maxOutputTokens: 8192 // 詳細な分析のために十分なトークン数
       }

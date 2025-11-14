@@ -650,99 +650,12 @@ ${video.source_type === 'youtube' ? `URL: ${video.video_url}` : ''}
   // プロンプト生成
   const prompt = generateVideoAnalysisPrompt(videoDescription, clientProfile);
   
-  // TEMPORARY: API Key issue - using mock analysis for demonstration
-  // TODO: Replace with actual Gemini API call once valid API key is configured
-  
-  // Mock analysis data (simulating Gemini response)
-  const mockAnalysisData = {
-    cutFrequency: 2.5,
-    shotTypes: ["寄り", "引き", "ズーム"],
-    shotTypeRatio: { "寄り": 0.5, "引き": 0.3, "ズーム": 0.2 },
-    cutCount: Math.round(video.duration_seconds / 2.5),
-    informationDensity: 7.5,
-    openingCutChanges: 3,
-    telopStyle: {
-      type: "白ベタ",
-      hasOutline: true,
-      hasShadow: false,
-      animation: "ポップイン",
-      fontSize: "中"
-    },
-    telopFrequency: 0.75,
-    telopColors: [clientProfile?.main_color || "#FF0000", "#FFFFFF"],
-    emojiUsage: { frequency: "medium", types: ["✨", "💡"] },
-    dominantColors: [clientProfile?.main_color || "#FF6B6B", clientProfile?.sub_color || "#4ECDC4", "#FFE66D"],
-    colorPsychology: "明るく親しみやすい印象を与える配色",
-    colorTemperature: "warm",
-    brightnessLevel: 75,
-    saturationLevel: 80,
-    contrastRatio: 4.5,
-    pace: clientProfile?.tempo || "fast",
-    sceneChangeTempo: Array.from({length: 10}, (_, i) => i * (video.duration_seconds / 10)),
-    rhythmPattern: "一定のリズムを維持",
-    speedRampUsage: false,
-    hasBgm: true,
-    bgmGenre: "ポップ",
-    bgmVolume: "適切",
-    soundEffectUsage: {
-      frequency: "medium",
-      types: ["ポップ音", "スワイプ音"],
-      timing: "カット毎"
-    },
-    silenceStrategy: "なし",
-    structure: {
-      intro: { start: 0, end: 3, hookStrength: 85 },
-      problemStatement: { start: 3, end: 8 },
-      content: { start: 8, end: video.duration_seconds - 5 },
-      climax: { start: video.duration_seconds - 8, end: video.duration_seconds - 3 },
-      cta: { start: video.duration_seconds - 3, end: video.duration_seconds, clarity: "高" },
-      outro: { start: video.duration_seconds - 2, end: video.duration_seconds }
-    },
-    hookDuration: 3,
-    ctaPosition: "end",
-    engagementMetrics: {
-      estimatedRetention: 75,
-      shareInducingElements: ["共感", "驚き"],
-      commentInducingElements: ["質問投げかけ"],
-      saveInducingElements: ["実用的情報"],
-      viralPotential: 78
-    },
-    strengths: [
-      `【カット割り】平均${(video.duration_seconds / Math.round(video.duration_seconds / 2.5)).toFixed(1)}秒/カットで視聴者の注意を途切れさせない（理想値2.0-2.5秒）`,
-      "【色彩】クライアントのブランドカラーを一貫して使用、ブランド認知度向上に貢献",
-      `【構成】動画尺${video.duration_seconds}秒は視聴維持に最適な長さ、完走率${75 + Math.random() * 10 | 0}%予測`,
-      "【テロップ】出現率75%で情報伝達が確実、文字なし視聴にも対応",
-      "【テンポ】一定のリズムで視聴者に安心感を提供、認知負荷が適切"
-    ],
-    weaknesses: [
-      "【画角変化】中盤で画角変化が少なめ、視聴者の飽きリスクあり",
-      "【フック】冒頭3秒のフック強度85/100、90以上でさらに離脱率低下見込み",
-      "【CTA配置】CTAが最後のみ、15秒地点にミニCTAで完走率+10%向上可能",
-      "【BGM音量】詳細な音量バランス分析には実際の音声データが必要"
-    ],
-    recommendations: [
-      `【即効性★★★】冒頭1-2秒に質問形式のフック追加→離脱率-15%見込み`,
-      `【即効性★★★】${Math.round(video.duration_seconds * 0.5)}秒地点にミニCTA挿入（例：「最後まで見てね✨」）→完走率+10%見込み`,
-      "【効果大★★☆】中盤のカット頻度を2.0秒に短縮、飽き防止→視聴維持率+8%",
-      `【効果大★★☆】画角を超寄り・寄り・引きの3種類以上に増やす→注目度+12%`,
-      "【長期効果★☆☆】エンディングに次回予告追加→フォロワー獲得率+20%"
-    ]
-  };
-  
-  const analysisData = mockAnalysisData;
-  
-  /* ORIGINAL CODE - Uncomment when valid API key is available:
-  let imageData: string | undefined = undefined;
-  
-  if (video.source_type === 'youtube' && video.video_url) {
-    const thumbnailUrl = getYouTubeFrameUrl(video.video_url, 0);
-  }
-  
-  const response = await callGeminiAPI(prompt, config, imageData);
+  // Gemini API呼び出し（実際のAI解析）
+  const response = await callGeminiAPI(prompt, config);
   
   const executionTime = Date.now() - startTime;
   
-  /* MOCK MODE - Skip JSON extraction
+  // レスポンスからJSONを抽出
   const text = response.candidates[0].content.parts[0].text;
   
   let jsonText = null;
@@ -778,12 +691,10 @@ ${video.source_type === 'youtube' ? `URL: ${video.video_url}` : ''}
     console.error('Attempted to parse:', jsonText.substring(0, 500));
     throw new Error('JSONパースエラー: ' + String(parseError));
   }
-  */
   
-  // Mock token usage and cost
-  const tokensUsed = 0; // Mock mode: no actual API call
-  const costUsd = 0; // Mock mode: free
-  const executionTime = Date.now() - startTime; // Calculate execution time
+  // トークン使用量とコストを計算
+  const tokensUsed = response.usageMetadata?.totalTokenCount || 0;
+  const costUsd = estimateGeminiCost(config.model, tokensUsed);
   
   return {
     // データベース保存用の正規化されたフィールド
