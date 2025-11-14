@@ -1,4 +1,5 @@
 // SNS運用代行システム - フロントエンドロジック
+console.log('✅ app.js loaded successfully');
 
 let currentClients = [];
 let currentAnalyses = [];
@@ -7,6 +8,8 @@ let currentRevisions = [];
 
 // 初期化
 document.addEventListener('DOMContentLoaded', () => {
+  console.log('✅ DOMContentLoaded event fired');
+  
   // デフォルトでクライアントタブを表示
   switchTab('clients');
   loadClients();
@@ -15,6 +18,9 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('campaign-form')?.addEventListener('submit', handleCampaignSubmit);
   document.getElementById('blueprint-form')?.addEventListener('submit', handleBlueprintSubmit);
   document.getElementById('revision-form')?.addEventListener('submit', handleRevisionSubmit);
+  
+  console.log('✅ Event listeners registered');
+  console.log('✅ showClientModal available:', typeof window.showClientModal);
 });
 
 // タブ切り替え
@@ -94,6 +100,7 @@ function displayClients() {
 }
 
 window.showClientModal = function(clientId = null) {
+  console.log('🔵 showClientModal called with clientId:', clientId);
   const modalHtml = \`
     <div id="client-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
