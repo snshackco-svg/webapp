@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // タブ切り替え
-function switchTab(tabName) {
+window.switchTab = function(tabName) {
   // すべてのタブコンテンツを非表示
   document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(el => {
@@ -93,7 +93,7 @@ function displayClients() {
   \`).join('');
 }
 
-function showClientModal(clientId = null) {
+window.showClientModal = function(clientId = null) {
   const modalHtml = \`
     <div id="client-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -174,7 +174,7 @@ async function saveClient(clientId) {
   }
 }
 
-async function deleteClient(id) {
+window.deleteClient = async function(id) {
   if (!confirm('本当にこのクライアントを削除しますか?')) return;
 
   try {
@@ -454,7 +454,7 @@ function displayBlueprintResults(data) {
   \`;
 }
 
-async function runEditReview(blueprintId) {
+window.runEditReview = async function(blueprintId) {
   try {
     showNotification('編集チェック中...', 'info');
     const response = await axios.post(\`/api/blueprints/\${blueprintId}/review\`);
@@ -625,7 +625,7 @@ async function populateClientSelect(selectId) {
   }
 }
 
-function closeModal() {
+window.closeModal = function() {
   document.getElementById('client-modal')?.remove();
   document.getElementById('review-modal')?.remove();
   document.getElementById('revision-modal')?.remove();
@@ -665,12 +665,12 @@ async function loadBlueprints() {
   // 編集設計図一覧を読み込む（必要に応じて実装）
 }
 
-function viewClientDetail(id) {
+window.viewClientDetail = function(id) {
   // クライアント詳細表示（必要に応じて実装）
   alert('クライアント詳細画面は今後実装予定です');
 }
 
-function editClient(id) {
+window.editClient = function(id) {
   // クライアント編集（必要に応じて実装）
   showClientModal(id);
 }
