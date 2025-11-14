@@ -60,7 +60,10 @@
 ### 🆕 ✅ 7. 動画学習システム（Video Learning System）
 - **動画アップロード**: Cloudflare R2への直接アップロード（MP4/MOV/AVI/WebM対応）
 - **YouTube統合**: YouTube URL経由で動画追加（メタデータ自動取得）
-- **AI動画解析**: Gemini 2.5 Flash Latest（2025年最新）による超高精度な編集スタイル分析
+- **⚠️ AI動画解析**: 現在モックシステムで動作中（Gemini APIキー制限のため）
+  - **注意**: 提供されたGemini APIキーが全モデルで404エラーを返すため、一時的にモック分析データを使用
+  - **モック機能**: 実際のGemini API呼び出しをスキップし、包括的な分析データをシミュレート
+  - **準備完了**: 有効なAPIキーがあれば即座に実際のGemini解析に切り替え可能
   - カット割りの科学的分析（平均間隔・情報密度・リズムパターン）
   - テロップ戦略分析（出現率・アニメーション・絵文字使用）
   - 色彩心理学分析（支配色・心理的影響・コントラスト比）
@@ -76,6 +79,42 @@
 - **開発環境**: https://3000-ikelml0m52s4b77smodhy-18e660f9.sandbox.novita.ai
 - **本番環境**: デプロイ後に更新されます
 - **GitHub**: https://github.com/snshackco-svg/webapp
+
+## ⚠️ 重要な実装ノート
+
+### Gemini API キー問題
+現在、提供されたGemini APIキー（`AIzaSyDo056MqmiEDXkfZrDlU6sZ4O_CETin7Xo`）は以下の理由で使用できません：
+
+**試行したモデル（すべて404エラー）:**
+- gemini-2.5-flash-latest
+- gemini-1.5-pro-002
+- gemini-1.5-pro
+- gemini-1.5-flash
+- gemini-1.0-pro
+- gemini-pro
+
+**エラーメッセージ例:**
+```
+{
+  "error": {
+    "code": 404,
+    "message": "models/gemini-1.5-flash is not found for API version v1beta, or is not supported for generateContent"
+  }
+}
+```
+
+**現在の対策:**
+- モック分析システムを実装（`src/gemini-helper.ts`の`analyzeVideoWithGemini`関数）
+- 実際のAPI呼び出しをスキップし、包括的な分析データを生成
+- すべての動画学習機能が正常に動作（実際のAI解析以外）
+
+**有効なAPIキーを入手したら:**
+1. `.dev.vars` ファイルの `GEMINI_API_KEY` を更新
+2. `src/gemini-helper.ts` の `analyzeVideoWithGemini` 関数でモックコードをコメントアウト
+3. 元のGemini API呼び出しコードをアンコメント
+4. `npm run build && pm2 restart webapp` で再起動
+
+コードは実際のGemini統合に即座に切り替え可能な状態です。
 
 ## システム画面構成
 
@@ -252,7 +291,7 @@ curl http://localhost:3000
 - `GET /api/videos/client/:clientId` - クライアントの学習動画一覧
 - `GET /api/videos/:videoId` - 動画詳細
 - `DELETE /api/videos/:videoId` - 動画削除
-- `POST /api/videos/:videoId/analyze` - AI動画解析実行（Gemini 2.0）
+- `POST /api/videos/:videoId/analyze` - AI動画解析実行（⚠️ 現在モックデータで動作）
 - `GET /api/videos/:videoId/analysis` - 解析結果取得
 - `GET /api/videos/stats/:clientId` - 学習統計取得
 - `POST /api/videos/stats/:clientId/recalculate` - 学習統計再計算
@@ -316,19 +355,22 @@ npm run deploy:prod
 5. ✅ 修正依頼AI具体化
 6. ✅ 編集7箇条チェック
 7. ✅ 5画面UI構成
-8. 🆕 ✅ 動画学習システム（Gemini 2.0統合）
-9. 🆕 ✅ 動画AI解析エンジン（超高度分析）
+8. 🆕 ✅ 動画学習システム基盤（R2アップロード・YouTube統合・データベース）
+9. 🆕 ⚠️ 動画AI解析エンジン（モックシステムで動作中・APIキー待ち）
 10. 🆕 ✅ 学習統計の自動集計
 
 ### 次のステップ
-1. 🔲 本番環境へのデプロイ
-2. 🔲 クライアント詳細画面の充実
-3. 🔲 企画案の編集・削除機能
-4. 🔲 編集設計図のPDF出力
-5. 🔲 CSV自動アップロード機能
-6. 🔲 ユーザー認証機能
-7. 🔲 チーム機能（複数ユーザー対応）
-8. 🔲 通知機能（修正完了時など）
+1. 🔥 **最優先**: 有効なGemini APIキーの取得（動画学習システムの実AI解析に必要）
+2. 🔲 実際のGemini API統合（APIキー取得後即座に対応可能）
+3. 🔲 既存モジュールへのGemini統合（企画生成・編集設計図）
+4. 🔲 本番環境へのデプロイ（Cloudflare Pages）
+5. 🔲 クライアント詳細画面の充実
+6. 🔲 企画案の編集・削除機能
+7. 🔲 編集設計図のPDF出力
+8. 🔲 CSV自動アップロード機能
+9. 🔲 ユーザー認証機能
+10. 🔲 チーム機能（複数ユーザー対応）
+11. 🔲 通知機能（修正完了時など）
 
 ### 機能拡張の提案
 - 🆕 ✅ **AI API連携完了**: Google Gemini 2.0 Flash Experimental統合済み（完全無料）
