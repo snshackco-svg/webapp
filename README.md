@@ -19,7 +19,7 @@
 ## URL
 - **開発環境**: https://3000-ikelml0m52s4b77smodhy-18e660f9.sandbox.novita.ai
 - **本番環境**: デプロイ後に更新されます
-- **GitHub**: 設定後に更新されます
+- **GitHub**: https://github.com/snshackco-svg/webapp
 
 ## API エンドポイント
 
