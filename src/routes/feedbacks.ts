@@ -290,7 +290,22 @@ feedbacks.post('/check-video/:videoId', async (c) => {
       .bind(video.client_id)
       .first();
 
-    if (!settings || !settings.auto_check_enabled) {
+    if (!settings) {
+      // 設定がない場合はデフォルト設定を作成
+      await c.env.DB.prepare(`
+        INSERT INTO video_check_settings (client_id, similarity_threshold, auto_check_enabled)
+        VALUES (?, 0.7, 1)
+      `).bind(video.client_id).run();
+      
+      // 再取得
+      const newSettings = await c.env.DB.prepare('SELECT * FROM video_check_settings WHERE client_id = ?')
+        .bind(video.client_id)
+        .first();
+      
+      if (!newSettings || newSettings.auto_check_enabled !== 1) {
+        return c.json({ error: 'Auto check is disabled for this client' }, 400);
+      }
+    } else if (settings.auto_check_enabled !== 1) {
       return c.json({ error: 'Auto check is disabled for this client' }, 400);
     }
 
