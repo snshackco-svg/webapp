@@ -550,19 +550,21 @@ app.get('/', (c) => {
                             
                             <!-- チェック方法切り替えタブ -->
                             <div class="flex space-x-2 mb-4 border-b">
-                                <button onclick="switchVideoCheckMode('file')" id="check-mode-file" class="px-4 py-2 font-semibold text-blue-600 border-b-2 border-blue-600">
+                                <!-- 動画ファイルアップロードは現在無効（R2未有効化）
+                                <button onclick="switchVideoCheckMode('file')" id="check-mode-file" class="px-4 py-2 font-semibold text-gray-500 hover:text-blue-600">
                                     <i class="fas fa-file-video mr-2"></i>動画ファイル
                                 </button>
-                                <button onclick="switchVideoCheckMode('gdrive')" id="check-mode-gdrive" class="px-4 py-2 font-semibold text-gray-500 hover:text-blue-600">
-                                    <i class="fab fa-google-drive mr-2"></i>Google Drive
+                                -->
+                                <button onclick="switchVideoCheckMode('gdrive')" id="check-mode-gdrive" class="px-4 py-2 font-semibold text-blue-600 border-b-2 border-blue-600">
+                                    <i class="fab fa-google-drive mr-2"></i>Google Drive / YouTube
                                 </button>
                                 <button onclick="switchVideoCheckMode('existing')" id="check-mode-existing" class="px-4 py-2 font-semibold text-gray-500 hover:text-blue-600">
                                     <i class="fas fa-database mr-2"></i>登録済み動画
                                 </button>
                             </div>
                             
-                            <!-- 動画ファイルアップロード -->
-                            <div id="check-file-input" class="space-y-4">
+                            <!-- 動画ファイルアップロード（現在無効） -->
+                            <div id="check-file-input" class="space-y-4" style="display:none;">
                                 <div>
                                     <label class="block text-sm font-semibold text-gray-700 mb-2">動画ファイルを選択 <span class="text-red-500">*</span></label>
                                     <input type="file" id="check-video-file" accept="video/mp4,video/mov,video/avi,video/webm" class="w-full border border-gray-300 rounded-lg px-4 py-2">
@@ -577,13 +579,19 @@ app.get('/', (c) => {
                                 </button>
                             </div>
                             
-                            <!-- Google Drive URL入力 -->
-                            <div id="check-gdrive-input" class="space-y-4" style="display:none;">
+                            <!-- Google Drive / YouTube URL入力 -->
+                            <div id="check-gdrive-input" class="space-y-4">
+                                <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-4">
+                                    <p class="text-sm text-blue-800">
+                                        <i class="fas fa-info-circle mr-2"></i>
+                                        <strong>Google Drive</strong>または<strong>YouTube URL</strong>を入力してください。
+                                    </p>
+                                </div>
                                 <div>
-                                    <label class="block text-sm font-semibold text-gray-700 mb-2">Google Drive 共有リンク <span class="text-red-500">*</span></label>
-                                    <input type="url" id="check-gdrive-url" class="w-full border border-gray-300 rounded-lg px-4 py-2" placeholder="https://drive.google.com/file/d/...">
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">動画URL <span class="text-red-500">*</span></label>
+                                    <input type="url" id="check-gdrive-url" class="w-full border border-gray-300 rounded-lg px-4 py-2" placeholder="https://drive.google.com/... または https://youtube.com/...">
                                     <p class="text-xs text-gray-500 mt-1">
-                                        <i class="fas fa-info-circle mr-1"></i>リンクの共有設定を「リンクを知っている全員」に設定してください
+                                        <i class="fas fa-info-circle mr-1"></i>Google Driveの場合、リンクの共有設定を「リンクを知っている全員」に設定してください
                                     </p>
                                 </div>
                                 <div>
@@ -591,7 +599,7 @@ app.get('/', (c) => {
                                     <input type="text" id="check-video-title-gdrive" class="w-full border border-gray-300 rounded-lg px-4 py-2" placeholder="例: 新規作成動画_202511">
                                 </div>
                                 <button onclick="runVideoCheckWithGDrive()" class="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg font-bold shadow-md transition w-full">
-                                    <i class="fas fa-play-circle mr-2"></i>Google Drive動画をチェック実行
+                                    <i class="fas fa-play-circle mr-2"></i>動画をチェック実行
                                 </button>
                             </div>
                             

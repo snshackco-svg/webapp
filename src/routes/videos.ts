@@ -91,6 +91,15 @@ async function fetchYouTubeMetadata(videoId: string, apiKey: string): Promise<an
  */
 videos.post('/upload', async (c) => {
   try {
+    // R2が有効化されていないため、ファイルアップロードは現在サポートされていません
+    // 代わりにGoogle DriveまたはYouTube URLを使用してください
+    return c.json({ 
+      error: 'File upload is currently disabled. R2 storage is not enabled. Please use Google Drive URL or YouTube URL instead.',
+      error_ja: '動画ファイルのアップロードは現在無効です。R2ストレージが有効化されていません。Google DriveリンクまたはYouTube URLをご利用ください。'
+    }, 503)
+    
+    /*
+    // R2有効化後のコード
     const formData = await c.req.formData()
     const file = formData.get('video') as File
     const clientId = formData.get('client_id') as string
@@ -145,6 +154,7 @@ videos.post('/upload', async (c) => {
       r2_key: r2Key,
       message: 'Video uploaded successfully. Analysis can be triggered next.'
     })
+    */
   } catch (error) {
     console.error('Video upload error:', error)
     return c.json({ error: 'Failed to upload video', details: String(error) }, 500)

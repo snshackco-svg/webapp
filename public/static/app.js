@@ -1519,7 +1519,8 @@ window.runVideoCheckWithFile = async function() {
     
   } catch (error) {
     console.error('Failed to check video with file:', error);
-    showNotification('処理に失敗しました: ' + (error.response?.data?.error || error.message), 'error');
+    const errorMsg = error.response?.data?.error_ja || error.response?.data?.error || error.message;
+    showNotification('処理に失敗しました: ' + errorMsg, 'error');
   }
 };
 
@@ -1561,7 +1562,8 @@ window.runVideoCheckWithGDrive = async function() {
     
   } catch (error) {
     console.error('Failed to check video with Google Drive:', error);
-    showNotification('処理に失敗しました: ' + (error.response?.data?.error || error.message), 'error');
+    const errorMsg = error.response?.data?.error_ja || error.response?.data?.error || error.message;
+    showNotification('処理に失敗しました: ' + errorMsg, 'error');
   }
 };
 
