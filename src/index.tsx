@@ -547,14 +547,63 @@ app.get('/', (c) => {
                             <h3 class="text-lg font-bold text-gray-800 mb-4">
                                 <i class="fas fa-search mr-2"></i>動画を選択してチェック
                             </h3>
-                            <div class="space-y-4">
+                            
+                            <!-- チェック方法切り替えタブ -->
+                            <div class="flex space-x-2 mb-4 border-b">
+                                <button onclick="switchVideoCheckMode('file')" id="check-mode-file" class="px-4 py-2 font-semibold text-blue-600 border-b-2 border-blue-600">
+                                    <i class="fas fa-file-video mr-2"></i>動画ファイル
+                                </button>
+                                <button onclick="switchVideoCheckMode('gdrive')" id="check-mode-gdrive" class="px-4 py-2 font-semibold text-gray-500 hover:text-blue-600">
+                                    <i class="fab fa-google-drive mr-2"></i>Google Drive
+                                </button>
+                                <button onclick="switchVideoCheckMode('existing')" id="check-mode-existing" class="px-4 py-2 font-semibold text-gray-500 hover:text-blue-600">
+                                    <i class="fas fa-database mr-2"></i>登録済み動画
+                                </button>
+                            </div>
+                            
+                            <!-- 動画ファイルアップロード -->
+                            <div id="check-file-input" class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">動画ファイルを選択 <span class="text-red-500">*</span></label>
+                                    <input type="file" id="check-video-file" accept="video/mp4,video/mov,video/avi,video/webm" class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                                    <p class="text-xs text-gray-500 mt-1">対応形式: MP4, MOV, AVI, WebM（最大100MB）</p>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">動画タイトル（任意）</label>
+                                    <input type="text" id="check-video-title-file" class="w-full border border-gray-300 rounded-lg px-4 py-2" placeholder="例: 新規作成動画_202511">
+                                </div>
+                                <button onclick="runVideoCheckWithFile()" class="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg font-bold shadow-md transition w-full">
+                                    <i class="fas fa-play-circle mr-2"></i>動画をアップロードしてチェック実行
+                                </button>
+                            </div>
+                            
+                            <!-- Google Drive URL入力 -->
+                            <div id="check-gdrive-input" class="space-y-4" style="display:none;">
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">Google Drive 共有リンク <span class="text-red-500">*</span></label>
+                                    <input type="url" id="check-gdrive-url" class="w-full border border-gray-300 rounded-lg px-4 py-2" placeholder="https://drive.google.com/file/d/...">
+                                    <p class="text-xs text-gray-500 mt-1">
+                                        <i class="fas fa-info-circle mr-1"></i>リンクの共有設定を「リンクを知っている全員」に設定してください
+                                    </p>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">動画タイトル（任意）</label>
+                                    <input type="text" id="check-video-title-gdrive" class="w-full border border-gray-300 rounded-lg px-4 py-2" placeholder="例: 新規作成動画_202511">
+                                </div>
+                                <button onclick="runVideoCheckWithGDrive()" class="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg font-bold shadow-md transition w-full">
+                                    <i class="fas fa-play-circle mr-2"></i>Google Drive動画をチェック実行
+                                </button>
+                            </div>
+                            
+                            <!-- 登録済み動画選択 -->
+                            <div id="check-existing-input" class="space-y-4" style="display:none;">
                                 <div>
                                     <label class="block text-sm font-semibold text-gray-700 mb-2">チェック対象動画</label>
-                                    <select id="check-video-select" class="w-full border border-gray-300 rounded-lg px-4 py-2" onchange="checkVideoForFeedbacks(this.value)">
+                                    <select id="check-video-select" class="w-full border border-gray-300 rounded-lg px-4 py-2">
                                         <option value="">選択してください</option>
                                     </select>
                                 </div>
-                                <button onclick="runVideoCheck()" class="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg font-bold shadow-md transition w-full">
+                                <button onclick="runVideoCheckWithExisting()" class="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg font-bold shadow-md transition w-full">
                                     <i class="fas fa-play-circle mr-2"></i>自動チェック実行
                                 </button>
                             </div>

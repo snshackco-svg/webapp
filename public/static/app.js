@@ -1414,3 +1414,230 @@ window.judgeMatch = async function(matchId, judgement) {
   }
 };
 
+// 動画チェックモード切り替え
+window.switchVideoCheckMode = function(mode) {
+  // すべてのモードを非表示
+  document.getElementById('check-file-input').style.display = 'none';
+  document.getElementById('check-gdrive-input').style.display = 'none';
+  document.getElementById('check-existing-input').style.display = 'none';
+  
+  // タブのスタイルをリセット
+  document.querySelectorAll('[id^="check-mode-"]').forEach(btn => {
+    btn.classList.remove('text-blue-600', 'border-blue-600', 'border-b-2');
+    btn.classList.add('text-gray-500');
+  });
+  
+  // 選択されたモードを表示
+  if (mode === 'file') {
+    document.getElementById('check-file-input').style.display = 'block';
+    document.getElementById('check-mode-file').classList.add('text-blue-600', 'border-blue-600', 'border-b-2');
+    document.getElementById('check-mode-file').classList.remove('text-gray-500');
+  } else if (mode === 'gdrive') {
+    document.getElementById('check-gdrive-input').style.display = 'block';
+    document.getElementById('check-mode-gdrive').classList.add('text-blue-600', 'border-blue-600', 'border-b-2');
+    document.getElementById('check-mode-gdrive').classList.remove('text-gray-500');
+  } else if (mode === 'existing') {
+    document.getElementById('check-existing-input').style.display = 'block';
+    document.getElementById('check-mode-existing').classList.add('text-blue-600', 'border-blue-600', 'border-b-2');
+    document.getElementById('check-mode-existing').classList.remove('text-gray-500');
+    // 登録済み動画一覧を読み込む
+    loadExistingVideosForCheck();
+  }
+};
+
+// 登録済み動画をチェック用セレクトボックスに読み込む
+async function loadExistingVideosForCheck() {
+  const clientId = document.getElementById('feedback-client-select').value;
+  if (!clientId) {
+    showNotification('クライアントを選択してください', 'warning');
+    return;
+  }
+  
+  try {
+    const response = await axios.get(`/api/videos/client/${clientId}`);
+    const select = document.getElementById('check-video-select');
+    select.innerHTML = '<option value="">選択してください</option>';
+    
+    response.data.videos.forEach(video => {
+      const option = document.createElement('option');
+      option.value = video.id;
+      option.textContent = `${video.title} (${video.source === 'youtube' ? 'YouTube' : 'アップロード'})`;
+      select.appendChild(option);
+    });
+  } catch (error) {
+    console.error('Failed to load videos:', error);
+    showNotification('動画一覧の取得に失敗しました', 'error');
+  }
+}
+
+// 動画ファイルをアップロードしてチェック
+window.runVideoCheckWithFile = async function() {
+  const fileInput = document.getElementById('check-video-file');
+  const titleInput = document.getElementById('check-video-title-file');
+  const clientId = document.getElementById('feedback-client-select').value;
+  
+  if (!clientId) {
+    showNotification('クライアントを選択してください', 'warning');
+    return;
+  }
+  
+  if (!fileInput.files || !fileInput.files[0]) {
+    showNotification('動画ファイルを選択してください', 'warning');
+    return;
+  }
+  
+  const file = fileInput.files[0];
+  const maxSize = 100 * 1024 * 1024; // 100MB
+  
+  if (file.size > maxSize) {
+    showNotification('ファイルサイズが大きすぎます（最大100MB）', 'error');
+    return;
+  }
+  
+  try {
+    showNotification('動画をアップロード中...', 'info');
+    
+    // 動画をアップロード
+    const formData = new FormData();
+    formData.append('video', file);
+    formData.append('client_id', clientId);
+    formData.append('title', titleInput.value || file.name);
+    
+    const uploadResponse = await axios.post('/api/videos/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    
+    const videoId = uploadResponse.data.video_id;
+    showNotification('アップロード完了。AI解析を開始します...', 'info');
+    
+    // AI解析を実行
+    await axios.post(`/api/videos/${videoId}/analyze`);
+    showNotification('AI解析完了。フィードバックチェックを実行します...', 'info');
+    
+    // フィードバックチェックを実行
+    await runVideoCheckById(videoId);
+    
+  } catch (error) {
+    console.error('Failed to check video with file:', error);
+    showNotification('処理に失敗しました: ' + (error.response?.data?.error || error.message), 'error');
+  }
+};
+
+// Google Drive URLでチェック
+window.runVideoCheckWithGDrive = async function() {
+  const urlInput = document.getElementById('check-gdrive-url');
+  const titleInput = document.getElementById('check-video-title-gdrive');
+  const clientId = document.getElementById('feedback-client-select').value;
+  
+  if (!clientId) {
+    showNotification('クライアントを選択してください', 'warning');
+    return;
+  }
+  
+  if (!urlInput.value) {
+    showNotification('Google Drive URLを入力してください', 'warning');
+    return;
+  }
+  
+  try {
+    showNotification('Google Drive動画を処理中...', 'info');
+    
+    // Google Drive動画を追加（YouTube APIと同じエンドポイントを使用）
+    const addResponse = await axios.post('/api/videos/youtube', {
+      client_id: parseInt(clientId),
+      youtube_url: urlInput.value,
+      title: titleInput.value || 'Google Drive動画'
+    });
+    
+    const videoId = addResponse.data.video_id;
+    showNotification('動画追加完了。AI解析を開始します...', 'info');
+    
+    // AI解析を実行
+    await axios.post(`/api/videos/${videoId}/analyze`);
+    showNotification('AI解析完了。フィードバックチェックを実行します...', 'info');
+    
+    // フィードバックチェックを実行
+    await runVideoCheckById(videoId);
+    
+  } catch (error) {
+    console.error('Failed to check video with Google Drive:', error);
+    showNotification('処理に失敗しました: ' + (error.response?.data?.error || error.message), 'error');
+  }
+};
+
+// 登録済み動画でチェック
+window.runVideoCheckWithExisting = async function() {
+  const select = document.getElementById('check-video-select');
+  const videoId = select.value;
+  
+  if (!videoId) {
+    showNotification('動画を選択してください', 'warning');
+    return;
+  }
+  
+  await runVideoCheckById(videoId);
+};
+
+// 動画IDでチェック実行（共通関数）
+async function runVideoCheckById(videoId) {
+  try {
+    showNotification('フィードバックチェックを実行中...', 'info');
+    
+    const response = await axios.post(`/api/feedbacks/check-video/${videoId}`);
+    const matches = response.data.matches || [];
+    
+    // 結果表示エリアを表示
+    document.getElementById('check-results-container').style.display = 'block';
+    
+    // サマリー表示
+    document.getElementById('check-results-summary').innerHTML = `
+      <div class="bg-blue-50 border-l-4 border-blue-500 p-4">
+        <p class="font-semibold text-blue-900">
+          <i class="fas fa-info-circle mr-2"></i>
+          ${matches.length}件の類似指摘が見つかりました
+        </p>
+        <p class="text-sm text-${matches.length > 0 ? 'orange' : 'green'}-800 mt-1">
+          動画: ${response.data.video_title}
+        </p>
+      </div>
+    `;
+    
+    if (matches.length > 0) {
+      document.getElementById('check-results-list').innerHTML = matches.map(match => {
+        const rankClass = `similarity-rank-${match.similarity_rank.toLowerCase()}`;
+        const importanceColor = match.importance === '高' ? 'red' : match.importance === '中' ? 'yellow' : 'green';
+        
+        return `
+          <div class="border-2 ${match.similarity_rank === 'A' ? 'border-red-300' : 'border-gray-200'} rounded-lg p-4">
+            <div class="flex justify-between items-start mb-2">
+              <div class="flex items-center space-x-2">
+                <span class="text-sm font-bold px-3 py-1 rounded ${rankClass}">類似度 ${match.similarity_rank} (${(match.similarity_score * 100).toFixed(1)}%)</span>
+                <span class="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded">${match.category}</span>
+                <span class="text-xs bg-${importanceColor}-100 text-${importanceColor}-600 px-2 py-1 rounded font-bold">${match.importance}</span>
+              </div>
+            </div>
+            <p class="text-gray-800 mb-2">${match.feedback_text}</p>
+            <p class="text-sm text-gray-600 mb-3">過去マッチ回数: ${match.match_count}回 | 最終指摘: ${new Date(match.last_pointed_at).toLocaleDateString('ja-JP')}</p>
+            
+            <div class="flex space-x-2">
+              <button onclick="judgeMatch(${match.match_id}, 'true_positive')" class="text-sm bg-red-100 hover:bg-red-200 text-red-700 px-4 py-2 rounded transition">
+                <i class="fas fa-check-circle mr-1"></i>今回も該当
+              </button>
+              <button onclick="judgeMatch(${match.match_id}, 'false_positive')" class="text-sm bg-green-100 hover:bg-green-200 text-green-700 px-4 py-2 rounded transition">
+                <i class="fas fa-times-circle mr-1"></i>今回は問題なし
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    } else {
+      document.getElementById('check-results-list').innerHTML = '<p class="text-gray-500 text-center py-8">問題は検出されませんでした</p>';
+    }
+    
+    showNotification('自動チェックが完了しました', 'success');
+  } catch (error) {
+    console.error('Failed to check video:', error);
+    showNotification('チェックに失敗しました: ' + (error.response?.data?.error || error.message), 'error');
+  }
+}
+
