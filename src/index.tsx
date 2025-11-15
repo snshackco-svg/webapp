@@ -6,6 +6,7 @@ import campaigns from './routes/campaigns';
 import blueprints from './routes/blueprints';
 import revisions from './routes/revisions';
 import videos from './routes/videos';
+import feedbacks from './routes/feedbacks';
 
 // Type definition for Cloudflare bindings
 type Bindings = {
@@ -29,6 +30,7 @@ app.route('/api/campaigns', campaigns);
 app.route('/api/blueprints', blueprints);
 app.route('/api/revisions', revisions);
 app.route('/api/videos', videos);
+app.route('/api/feedbacks', feedbacks);
 
 // Health check endpoint
 app.get('/api/health', (c) => {
@@ -49,9 +51,16 @@ app.get('/', (c) => {
         <style>
           .tab-content { display: none; }
           .tab-content.active { display: block; }
+          .video-subtab-content { display: none; }
+          .video-subtab-content:first-of-type { display: block; }
+          .feedback-view { display: none; }
+          .feedback-view:first-of-type { display: block; }
           .status-red { color: #ef4444; }
           .status-yellow { color: #f59e0b; }
           .status-green { color: #10b981; }
+          .similarity-rank-a { background-color: #fecaca; color: #991b1b; }
+          .similarity-rank-b { background-color: #fed7aa; color: #9a3412; }
+          .similarity-rank-c { background-color: #fef3c7; color: #92400e; }
         </style>
     </head>
     <body class="bg-gray-50">
@@ -140,7 +149,15 @@ app.get('/', (c) => {
                             </div>
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">CSVデータ（Metricool形式）</label>
-                                <textarea id="campaign-csv" class="w-full border border-gray-300 rounded-lg px-4 py-2 h-32" placeholder="CSVデータをペースト、またはJSON形式で入力" required></textarea>
+                                <div class="space-y-2">
+                                    <div class="flex items-center space-x-2">
+                                        <input type="file" id="campaign-csv-file" accept=".csv" class="flex-1 border border-gray-300 rounded-lg px-4 py-2 text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                                        <button type="button" onclick="clearCSVFile()" class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-lg text-sm transition">
+                                            <i class="fas fa-times mr-1"></i>クリア
+                                        </button>
+                                    </div>
+                                    <textarea id="campaign-csv" class="w-full border border-gray-300 rounded-lg px-4 py-2 h-32" placeholder="CSVファイルを選択、またはCSVデータを直接ペースト" required></textarea>
+                                </div>
                             </div>
                             <button type="submit" class="bg-yellow-500 hover:bg-yellow-600 text-white px-8 py-3 rounded-lg font-bold shadow-md transition w-full">
                                 <i class="fas fa-magic mr-2"></i>企画を自動生成
@@ -198,6 +215,21 @@ app.get('/', (c) => {
                     <h2 class="text-2xl font-bold text-gray-800 mb-4">
                         <i class="fas fa-sync-alt text-green-600 mr-2"></i>修正依頼管理
                     </h2>
+                    
+                    <!-- AI解析の説明 -->
+                    <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-4">
+                        <div class="flex items-start">
+                            <i class="fas fa-info-circle text-blue-500 mt-1 mr-2"></i>
+                            <div>
+                                <p class="font-semibold text-blue-900 mb-1">修正管理のAI解析について</p>
+                                <p class="text-sm text-blue-800">
+                                    この機能は<strong>ルールベース分析</strong>を使用しています。クライアントプロファイル（色・フォント・雰囲気など）と修正コメントのキーワードから、具体的な修正指示を自動生成します。<br>
+                                    <span class="text-xs text-blue-700 mt-1 inline-block">※ Gemini APIは使用していません（コスト最適化のため）</span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div class="bg-white rounded-lg shadow-md p-6">
                         <form id="revision-form" class="space-y-4">
                             <div>
@@ -208,7 +240,10 @@ app.get('/', (c) => {
                             </div>
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">お客様からの修正コメント</label>
-                                <textarea id="revision-comment" class="w-full border border-gray-300 rounded-lg px-4 py-2 h-32" placeholder="例: もう少し明るくしてほしい" required></textarea>
+                                <textarea id="revision-comment" class="w-full border border-gray-300 rounded-lg px-4 py-2 h-32" placeholder="例: もう少し明るくしてほしい、テンポを速くしてほしい、色を調整してほしい" required></textarea>
+                                <p class="text-xs text-gray-500 mt-1">
+                                    キーワード例: 「明るく」「テンポ」「速く」「色」「カラー」「テロップ」「文字」
+                                </p>
                             </div>
                             <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg font-bold shadow-md transition w-full">
                                 <i class="fas fa-robot mr-2"></i>AIで具体化
@@ -227,6 +262,20 @@ app.get('/', (c) => {
                     <h2 class="text-2xl font-bold text-gray-800 mb-4">
                         <i class="fas fa-brain text-pink-600 mr-2"></i>動画学習システム
                     </h2>
+                    
+                    <!-- サブタブナビゲーション -->
+                    <div class="flex space-x-2 mb-6 border-b-2">
+                        <button onclick="switchVideoSubTab('learning')" id="video-subtab-learning" class="px-6 py-3 font-semibold text-pink-600 border-b-2 border-pink-600">
+                            <i class="fas fa-graduation-cap mr-2"></i>動画学習
+                        </button>
+                        <button onclick="switchVideoSubTab('feedback-check')" id="video-subtab-feedback-check" class="px-6 py-3 font-semibold text-gray-500 hover:text-pink-600">
+                            <i class="fas fa-clipboard-check mr-2"></i>動画チェック
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 動画学習サブタブ -->
+                <div id="video-learning-subtab" class="video-subtab-content">
                     <p class="text-gray-600 mb-6">
                         実際に制作した動画をアップロードまたはYouTube URLから追加し、AIが編集スタイルを学習します。
                         <br>学習データは企画生成・編集設計図に自動的に反映されます。
@@ -353,6 +402,175 @@ app.get('/', (c) => {
                         <div id="videos-list" class="space-y-4">
                             <!-- 動画カードがここに表示されます -->
                             <p class="text-gray-500 text-center py-8">クライアントを選択して動画を追加してください</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 動画チェックサブタブ -->
+                <div id="video-feedback-check-subtab" class="video-subtab-content" style="display:none;">
+                    <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6">
+                        <div class="flex items-start">
+                            <i class="fas fa-info-circle text-blue-500 mt-1 mr-2"></i>
+                            <div>
+                                <p class="font-semibold text-blue-900 mb-1">動画チェック機能について</p>
+                                <p class="text-sm text-blue-800">
+                                    過去にクライアントから指摘された修正内容を蓄積し、新しい動画で<strong>同じ指摘が発生していないか</strong>を自動チェックします。<br>
+                                    Gemini Embedding APIを使用してテキストの類似度を判定し、納品前に問題を発見できます。
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- クライアント選択 -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">対象クライアント</label>
+                        <select id="feedback-client-select" class="w-full border border-gray-300 rounded-lg px-4 py-2" onchange="loadFeedbacksForClient(this.value)">
+                            <option value="">選択してください</option>
+                        </select>
+                    </div>
+                    
+                    <!-- サブタブ切り替え（フィードバック登録 / 自動チェック結果） -->
+                    <div class="flex space-x-2 mb-6 border-b">
+                        <button onclick="switchFeedbackView('register')" id="feedback-view-register" class="px-4 py-2 font-semibold text-blue-600 border-b-2 border-blue-600">
+                            <i class="fas fa-plus-circle mr-2"></i>フィードバック登録
+                        </button>
+                        <button onclick="switchFeedbackView('check-results')" id="feedback-view-check-results" class="px-4 py-2 font-semibold text-gray-500 hover:text-blue-600">
+                            <i class="fas fa-check-circle mr-2"></i>自動チェック結果
+                        </button>
+                    </div>
+                    
+                    <!-- フィードバック登録ビュー -->
+                    <div id="feedback-register-view" class="feedback-view">
+                        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                            <h3 class="text-lg font-bold text-gray-800 mb-4">
+                                <i class="fas fa-clipboard-list mr-2"></i>過去指摘の登録
+                            </h3>
+                            <form id="feedback-form" class="space-y-4">
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2">カテゴリ <span class="text-red-500">*</span></label>
+                                        <select id="feedback-category" class="w-full border border-gray-300 rounded-lg px-4 py-2" required>
+                                            <option value="">選択してください</option>
+                                            <option value="構成">構成</option>
+                                            <option value="テンポ">テンポ</option>
+                                            <option value="テロップ">テロップ</option>
+                                            <option value="色味">色味</option>
+                                            <option value="音量">音量</option>
+                                            <option value="画角">画角</option>
+                                            <option value="NGワード">NGワード</option>
+                                            <option value="話し方">話し方</option>
+                                            <option value="その他">その他</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2">対象フェーズ <span class="text-red-500">*</span></label>
+                                        <select id="feedback-phase" class="w-full border border-gray-300 rounded-lg px-4 py-2" required>
+                                            <option value="">選択してください</option>
+                                            <option value="撮影">撮影</option>
+                                            <option value="編集">編集</option>
+                                            <option value="台本">台本</option>
+                                            <option value="その他">その他</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">重要度 <span class="text-red-500">*</span></label>
+                                    <div class="flex space-x-4">
+                                        <label class="flex items-center">
+                                            <input type="radio" name="feedback-importance" value="高" class="mr-2" required>
+                                            <span class="text-red-600 font-semibold">高</span>
+                                        </label>
+                                        <label class="flex items-center">
+                                            <input type="radio" name="feedback-importance" value="中" class="mr-2" checked>
+                                            <span class="text-yellow-600 font-semibold">中</span>
+                                        </label>
+                                        <label class="flex items-center">
+                                            <input type="radio" name="feedback-importance" value="低" class="mr-2">
+                                            <span class="text-green-600 font-semibold">低</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">指摘内容 <span class="text-red-500">*</span></label>
+                                    <textarea id="feedback-text" class="w-full border border-gray-300 rounded-lg px-4 py-2 h-24" placeholder="例: 冒頭3秒のインパクトが弱い" required></textarea>
+                                    <p class="text-xs text-gray-500 mt-1">具体的に記載してください。この内容がAI類似判定に使用されます。</p>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">関連動画（任意）</label>
+                                    <select id="feedback-video" class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                                        <option value="">なし</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">メモ・補足（任意）</label>
+                                    <textarea id="feedback-memo" class="w-full border border-gray-300 rounded-lg px-4 py-2 h-20" placeholder="追加情報があれば記載"></textarea>
+                                </div>
+                                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-bold shadow-md transition w-full">
+                                    <i class="fas fa-save mr-2"></i>フィードバックを登録
+                                </button>
+                            </form>
+                        </div>
+                        
+                        <!-- フィードバック一覧 -->
+                        <div class="bg-white rounded-lg shadow-md p-6">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-lg font-bold text-gray-800">
+                                    <i class="fas fa-list mr-2"></i>登録済みフィードバック
+                                </h3>
+                                <div class="flex space-x-2">
+                                    <select id="feedback-filter-category" class="border border-gray-300 rounded-lg px-3 py-1 text-sm" onchange="filterFeedbacks()">
+                                        <option value="">全カテゴリ</option>
+                                        <option value="構成">構成</option>
+                                        <option value="テンポ">テンポ</option>
+                                        <option value="テロップ">テロップ</option>
+                                        <option value="色味">色味</option>
+                                        <option value="音量">音量</option>
+                                        <option value="画角">画角</option>
+                                    </select>
+                                    <select id="feedback-filter-importance" class="border border-gray-300 rounded-lg px-3 py-1 text-sm" onchange="filterFeedbacks()">
+                                        <option value="">全重要度</option>
+                                        <option value="高">高</option>
+                                        <option value="中">中</option>
+                                        <option value="低">低</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div id="feedbacks-list" class="space-y-3">
+                                <p class="text-gray-500 text-center py-8">クライアントを選択してください</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 自動チェック結果ビュー -->
+                    <div id="feedback-check-results-view" class="feedback-view" style="display:none;">
+                        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                            <h3 class="text-lg font-bold text-gray-800 mb-4">
+                                <i class="fas fa-search mr-2"></i>動画を選択してチェック
+                            </h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">チェック対象動画</label>
+                                    <select id="check-video-select" class="w-full border border-gray-300 rounded-lg px-4 py-2" onchange="checkVideoForFeedbacks(this.value)">
+                                        <option value="">選択してください</option>
+                                    </select>
+                                </div>
+                                <button onclick="runVideoCheck()" class="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg font-bold shadow-md transition w-full">
+                                    <i class="fas fa-play-circle mr-2"></i>自動チェック実行
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- チェック結果表示 -->
+                        <div id="check-results-container" class="bg-white rounded-lg shadow-md p-6" style="display:none;">
+                            <h3 class="text-lg font-bold text-gray-800 mb-4">
+                                <i class="fas fa-clipboard-check mr-2"></i>チェック結果
+                            </h3>
+                            <div id="check-results-summary" class="mb-4">
+                                <!-- サマリー表示 -->
+                            </div>
+                            <div id="check-results-list" class="space-y-3">
+                                <!-- 類似マッチ一覧 -->
+                            </div>
                         </div>
                     </div>
                 </div>

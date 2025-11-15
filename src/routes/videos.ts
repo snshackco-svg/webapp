@@ -229,11 +229,13 @@ videos.get('/client/:clientId', async (c) => {
       SELECT 
         lv.*,
         CASE 
-          WHEN va.id IS NOT NULL THEN 1 
+          WHEN EXISTS (
+            SELECT 1 FROM video_analysis va 
+            WHERE va.learning_video_id = lv.id
+          ) THEN 1 
           ELSE 0 
         END as has_analysis
       FROM learning_videos lv
-      LEFT JOIN video_analysis va ON lv.id = va.learning_video_id
       WHERE lv.client_id = ?
       ORDER BY lv.upload_date DESC
     `).bind(clientId).all()
@@ -449,9 +451,31 @@ videos.get('/:videoId/analysis', async (c) => {
       return c.json({ error: 'Analysis not found' }, 404)
     }
     
+    // Reconstruct JSON objects from individual fields
+    const colorScheme = {
+      temperature: result.color_temperature || 'neutral',
+      brightness: result.brightness_level || 50,
+      saturation: result.saturation_level || 50,
+      dominant_colors: result.dominant_colors ? JSON.parse(result.dominant_colors) : []
+    }
+    
+    const paceRhythm = {
+      pace: result.pace || 'medium',
+      scene_changes: result.scene_change_tempo ? JSON.parse(result.scene_change_tempo) : []
+    }
+    
+    const bgmStyle = {
+      has_bgm: result.has_bgm || false,
+      genre: result.bgm_genre || '',
+      sound_effects: result.sound_effect_usage ? JSON.parse(result.sound_effect_usage) : {}
+    }
+    
     // Parse JSON fields for frontend consumption
     const analysis = {
       ...result,
+      color_scheme: colorScheme,
+      pace_rhythm: paceRhythm,
+      bgm_style: bgmStyle,
       telop_style: result.telop_style ? JSON.parse(result.telop_style) : null,
       raw_analysis: result.ai_raw_response ? JSON.parse(result.ai_raw_response) : null
     }

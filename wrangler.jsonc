@@ -12,14 +12,14 @@
     {
       "binding": "DB",
       "database_name": "webapp-production",
-      "database_id": "local-dev-database"  // Placeholder for local development, will be replaced with actual ID for production
-    }
-  ],
-  // R2 Storage for video files
-  "r2_buckets": [
-    {
-      "binding": "R2",
-      "bucket_name": "webapp-videos"
+      "database_id": "4a445de1-29ad-4075-9374-b429c8000edb"  // Production database ID
     }
   ]
+  // R2 Storage for video files (commented out - requires R2 to be enabled in Cloudflare dashboard)
+  // "r2_buckets": [
+  //   {
+  //     "binding": "R2",
+  //     "bucket_name": "webapp-videos"
+  //   }
+  // ]
 }

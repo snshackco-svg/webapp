@@ -60,10 +60,7 @@
 ### 🆕 ✅ 7. 動画学習システム（Video Learning System）
 - **動画アップロード**: Cloudflare R2への直接アップロード（MP4/MOV/AVI/WebM対応）
 - **YouTube統合**: YouTube URL経由で動画追加（メタデータ自動取得）
-- **⚠️ AI動画解析**: 現在モックシステムで動作中（Gemini APIキー制限のため）
-  - **注意**: 提供されたGemini APIキーが全モデルで404エラーを返すため、一時的にモック分析データを使用
-  - **モック機能**: 実際のGemini API呼び出しをスキップし、包括的な分析データをシミュレート
-  - **準備完了**: 有効なAPIキーがあれば即座に実際のGemini解析に切り替え可能
+- **✅ AI動画解析**: Gemini 2.0 Flash使用（実際のAI解析が動作中）
   - カット割りの科学的分析（平均間隔・情報密度・リズムパターン）
   - テロップ戦略分析（出現率・アニメーション・絵文字使用）
   - 色彩心理学分析（支配色・心理的影響・コントラスト比）
@@ -75,46 +72,51 @@
 - **品質向上**: 学習データを企画生成・編集設計図に自動反映
 - **コスト追跡**: Gemini API使用量とコストのリアルタイム追跡
 
+### 🆕 ✅ 8. 動画チェックシステム（Video Feedback Check System）
+**目的**: クライアントに二度同じ指摘をさせない、納品前の品質保証システム
+
+#### 主要機能
+- **📝 フィードバック登録**:
+  - 過去の指摘内容をカテゴリ別に蓄積（構成/テンポ/テロップ/色味/音量/画角/NGワード/話し方）
+  - フェーズ別管理（撮影/編集/台本/その他）
+  - 重要度設定（高/中/低）
+  - Gemini Embedding APIで自動ベクトル化
+
+- **🔍 自動チェック**:
+  - 新規動画に対して過去指摘との類似度判定
+  - コサイン類似度による高精度マッチング（閾値: 0.7）
+  - 類似度ランク表示（A/B/C/D）
+  - 重要度順・類似度順の自動ソート
+
+- **✅ 判定フィードバック**:
+  - ユーザーが「今回も該当」「今回は問題なし」を判定
+  - 判定データを蓄積してAI精度向上に活用
+  - マッチ回数の自動カウント
+
+- **📊 統計追跡**:
+  - フィードバックごとのマッチ回数
+  - 初回指摘日・最終指摘日の記録
+  - アーカイブ機能（チェック対象から除外）
+
+#### 技術実装
+- **Gemini Embedding API**: text-embedding-004モデルで768次元ベクトル化
+- **類似度計算**: コサイン類似度（0〜1の範囲）
+- **閾値設定**: クライアントごとにカスタマイズ可能
+- **データベース**: 3テーブル（client_feedback_templates, video_feedback_matches, video_check_settings）
+
 ## URL
+- **✅ 本番環境**: https://e2c52fca.webapp-6gg.pages.dev
 - **開発環境**: https://3000-ikelml0m52s4b77smodhy-18e660f9.sandbox.novita.ai
-- **本番環境**: デプロイ後に更新されます
 - **GitHub**: https://github.com/snshackco-svg/webapp
 
-## ⚠️ 重要な実装ノート
+## ✅ AI統合状況
 
-### Gemini API キー問題
-現在、提供されたGemini APIキー（`AIzaSyDo056MqmiEDXkfZrDlU6sZ4O_CETin7Xo`）は以下の理由で使用できません：
-
-**試行したモデル（すべて404エラー）:**
-- gemini-2.5-flash-latest
-- gemini-1.5-pro-002
-- gemini-1.5-pro
-- gemini-1.5-flash
-- gemini-1.0-pro
-- gemini-pro
-
-**エラーメッセージ例:**
-```
-{
-  "error": {
-    "code": 404,
-    "message": "models/gemini-1.5-flash is not found for API version v1beta, or is not supported for generateContent"
-  }
-}
-```
-
-**現在の対策:**
-- モック分析システムを実装（`src/gemini-helper.ts`の`analyzeVideoWithGemini`関数）
-- 実際のAPI呼び出しをスキップし、包括的な分析データを生成
-- すべての動画学習機能が正常に動作（実際のAI解析以外）
-
-**有効なAPIキーを入手したら:**
-1. `.dev.vars` ファイルの `GEMINI_API_KEY` を更新
-2. `src/gemini-helper.ts` の `analyzeVideoWithGemini` 関数でモックコードをコメントアウト
-3. 元のGemini API呼び出しコードをアンコメント
-4. `npm run build && pm2 restart webapp` で再起動
-
-コードは実際のGemini統合に即座に切り替え可能な状態です。
+### Gemini API統合完了
+- **✅ gemini-2.0-flash**: 動画解析で使用中（実際のAI解析が稼働中）
+- **✅ text-embedding-004**: 動画チェックシステムで使用中（768次元ベクトル化）
+- **APIキー**: 本番環境にシークレットとして設定済み
+- **開発環境**: `.dev.vars`で管理
+- **本番環境**: Cloudflare Pages Secretで管理
 
 ## システム画面構成
 
@@ -291,10 +293,22 @@ curl http://localhost:3000
 - `GET /api/videos/client/:clientId` - クライアントの学習動画一覧
 - `GET /api/videos/:videoId` - 動画詳細
 - `DELETE /api/videos/:videoId` - 動画削除
-- `POST /api/videos/:videoId/analyze` - AI動画解析実行（⚠️ 現在モックデータで動作）
+- `POST /api/videos/:videoId/analyze` - AI動画解析実行（Gemini 2.0 Flash）
 - `GET /api/videos/:videoId/analysis` - 解析結果取得
 - `GET /api/videos/stats/:clientId` - 学習統計取得
 - `POST /api/videos/stats/:clientId/recalculate` - 学習統計再計算
+
+#### 🆕 動画チェックシステム
+- `GET /api/feedbacks` - フィードバックテンプレート一覧（フィルタ対応）
+- `GET /api/feedbacks/:id` - フィードバック詳細取得
+- `POST /api/feedbacks` - フィードバック登録（Embedding自動生成）
+- `PUT /api/feedbacks/:id` - フィードバック更新（Embedding再生成）
+- `DELETE /api/feedbacks/:id` - フィードバック削除
+- `POST /api/feedbacks/check-video/:videoId` - 動画の自動チェック実行
+- `GET /api/feedbacks/matches/:videoId` - チェック結果取得
+- `PUT /api/feedbacks/matches/:matchId/judgement` - マッチ判定の記録
+- `GET /api/feedbacks/settings/:clientId` - チェック設定取得
+- `PUT /api/feedbacks/settings/:clientId` - チェック設定更新
 
 ## 使用技術スタック
 
@@ -320,29 +334,28 @@ curl http://localhost:3000
 - ルールベースのチェックシステム
 - 超高度動画解析エンジン（カット割り・テロップ・色彩心理学・テンポ数理分析・構成黄金比・エンゲージメント予測）
 
-## 本番環境へのデプロイ
+## ✅ 本番環境デプロイ完了
 
-### 1. Cloudflare D1データベースの作成（本番用）
+### デプロイ状況
+- **✅ 本番URL**: https://e2c52fca.webapp-6gg.pages.dev
+- **✅ D1データベース**: `webapp-production` (ID: 4a445de1-29ad-4075-9374-b429c8000edb)
+- **✅ マイグレーション**: 3ファイルすべて適用済み
+  - 0002_sns_management_schema.sql ✅
+  - 0003_video_learning_system.sql ✅
+  - 0004_video_feedback_system.sql ✅
+- **✅ シークレット設定**: GEMINI_API_KEY 設定済み
+- **⚠️ R2ストレージ**: Cloudflareダッシュボードで有効化が必要（動画アップロード機能用）
+
+### 本番環境への再デプロイ手順
 ```bash
-# 本番用D1データベースを作成
-npx wrangler d1 create webapp-production
+# 1. プロジェクトをビルド
+npm run build
 
-# 出力されたdatabase_idをwrangler.jsoncに設定
-```
+# 2. デプロイ実行
+npx wrangler pages deploy dist --project-name webapp
 
-### 2. マイグレーションの適用
-```bash
-# 本番データベースにスキーマを適用
-npm run db:migrate:prod
-```
-
-### 3. Cloudflare Pagesへのデプロイ
-```bash
-# プロジェクトを作成（初回のみ）
-npx wrangler pages project create webapp --production-branch main
-
-# デプロイ実行
-npm run deploy:prod
+# 3. シークレットの追加（新しいシークレットを追加する場合）
+npx wrangler pages secret put SECRET_NAME --project-name webapp
 ```
 
 ## 今後の開発推奨事項
@@ -355,14 +368,18 @@ npm run deploy:prod
 5. ✅ 修正依頼AI具体化
 6. ✅ 編集7箇条チェック
 7. ✅ 5画面UI構成
-8. 🆕 ✅ 動画学習システム基盤（R2アップロード・YouTube統合・データベース）
-9. 🆕 ⚠️ 動画AI解析エンジン（モックシステムで動作中・APIキー待ち）
-10. 🆕 ✅ 学習統計の自動集計
+8. ✅ 動画学習システム基盤（R2アップロード・YouTube統合・データベース）
+9. ✅ 動画AI解析エンジン（Gemini 2.0 Flash統合完了）
+10. ✅ 学習統計の自動集計
+11. ✅ 動画チェックシステム（Embedding API統合・類似度判定）
+12. ✅ 本番環境デプロイ（Cloudflare Pages + D1）
 
 ### 次のステップ
-1. 🔥 **最優先**: 有効なGemini APIキーの取得（動画学習システムの実AI解析に必要）
-2. 🔲 実際のGemini API統合（APIキー取得後即座に対応可能）
-3. 🔲 既存モジュールへのGemini統合（企画生成・編集設計図）
+1. ✅ **完了**: Gemini API統合（gemini-2.0-flash + text-embedding-004）
+2. ✅ **完了**: 本番環境デプロイ（Cloudflare Pages）
+3. ⚠️ **推奨**: Cloudflare R2の有効化（動画ファイルアップロード機能用）
+4. 🔲 既存モジュールへのGemini統合強化（企画生成・編集設計図）
+5. 🔲 動画チェックシステムの精度向上（ユーザーフィードバック蓄積）
 4. 🔲 本番環境へのデプロイ（Cloudflare Pages）
 5. 🔲 クライアント詳細画面の充実
 6. 🔲 企画案の編集・削除機能
@@ -448,6 +465,36 @@ npm run deploy:prod
 3. お客様からの修正コメントを入力
 4. 「AIで具体化」をクリック
 5. 編集者向けの具体的な指示を確認
+
+#### 5. 動画チェック（フィードバック蓄積）
+**目的**: 過去の指摘を蓄積し、同じミスを繰り返さない
+
+##### フィードバック登録
+1. 「動画学習」タブ→「動画チェック」サブタブを開く
+2. 対象クライアントを選択
+3. 「フィードバック登録」ビューで以下を入力：
+   - カテゴリ（構成/テンポ/テロップなど）
+   - 対象フェーズ（撮影/編集/台本）
+   - 重要度（高/中/低）
+   - 指摘内容（具体的に記載）
+4. 「フィードバックを登録」をクリック
+5. 自動的にGemini Embeddingで類似検索用ベクトル生成
+
+##### 自動チェック実行
+1. 「自動チェック結果」ビューに切り替え
+2. チェック対象動画を選択（解析済み動画のみ）
+3. 「自動チェック実行」をクリック
+4. 過去指摘との類似度を自動判定（閾値0.7以上）
+5. 類似度ランク（A/B/C）で結果表示
+6. 各マッチに対して判定：
+   - 「今回も該当」：再発として記録
+   - 「今回は問題なし」：誤検知として記録
+
+##### 活用方法
+- **納品前チェック**: 必ず自動チェックを実行してから納品
+- **フィードバック蓄積**: クライアントから指摘があったら即座に登録
+- **重要度設定**: 重大な指摘は「高」に設定（優先表示）
+- **定期見直し**: 古いフィードバックはアーカイブして精度維持
 
 ### データの永続化について
 - **重要**: 本番環境にデプロイしたデータは、再デプロイ後も保持されます
