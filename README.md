@@ -82,11 +82,14 @@
   - 重要度設定（高/中/低）
   - Gemini Embedding APIで自動ベクトル化
 
-- **🔍 自動チェック**:
-  - 新規動画に対して過去指摘との類似度判定
+- **🔍 自動チェック（3つの入力方式）**:
+  - **動画ファイル直接アップロード**: MP4/MOV/AVI/WebM（最大100MB）
+  - **Google Drive共有リンク**: 大容量動画に対応
+  - **登録済み動画選択**: 学習システムに登録済みの動画を利用
   - コサイン類似度による高精度マッチング（閾値: 0.7）
   - 類似度ランク表示（A/B/C/D）
   - 重要度順・類似度順の自動ソート
+  - 自動ワークフロー: アップロード → AI解析 → フィードバックチェック
 
 - **✅ 判定フィードバック**:
   - ユーザーが「今回も該当」「今回は問題なし」を判定
@@ -105,7 +108,7 @@
 - **データベース**: 3テーブル（client_feedback_templates, video_feedback_matches, video_check_settings）
 
 ## URL
-- **✅ 本番環境**: https://e2c52fca.webapp-6gg.pages.dev
+- **✅ 本番環境（最新）**: https://0c304b60.webapp-6gg.pages.dev
 - **開発環境**: https://3000-ikelml0m52s4b77smodhy-18e660f9.sandbox.novita.ai
 - **GitHub**: https://github.com/snshackco-svg/webapp
 
