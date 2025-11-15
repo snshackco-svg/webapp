@@ -108,7 +108,7 @@
 - **データベース**: 3テーブル（client_feedback_templates, video_feedback_matches, video_check_settings）
 
 ## URL
-- **✅ 本番環境（最新）**: https://e9af3d78.webapp-6gg.pages.dev
+- **✅ 本番環境（最新）**: https://c6a73a6c.webapp-6gg.pages.dev
 - **開発環境**: https://3000-ikelml0m52s4b77smodhy-18e660f9.sandbox.novita.ai
 - **GitHub**: https://github.com/snshackco-svg/webapp
 
